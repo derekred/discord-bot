@@ -79,13 +79,13 @@ async def on_member_join(member):
         # Send DM
         await member.send(
             f"Welcome to the server, {member.name}!\n"
-            f"Please reply with your Whop username to get access. You have 5 minutes to respond."
+            f"Please reply with your Whop username to get access."
         )
 
         def check(m):
             return m.author == member and isinstance(m.channel, discord.DMChannel)
 
-        response = await client.wait_for("message", check=check, timeout=300.0)
+        response = await client.wait_for("message", check=check)
         whop_username = response.content.strip()
 
         sheet.append_row([
@@ -103,11 +103,6 @@ async def on_member_join(member):
 
     except discord.Forbidden:
         print(f"Could not DM {member.name}")
-    except TimeoutError:
-        await member.send("You did not respond in time. Please contact an admin.")
-        general_channel = client.get_channel(GENERAL_CHANNEL_ID)
-        if general_channel:
-            await general_channel.send(f"⚠️ {member.mention} did not respond in time. Please contact an admin.")
     finally:
         pending_members.discard(member.id)
 
