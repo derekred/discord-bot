@@ -29,8 +29,11 @@ invite_cache = {}
 @client.event
 async def on_ready():
     for guild in client.guilds:
-        invites = await guild.fetch_invites()
-        invite_cache[guild.id] = {inv.code: inv.uses for inv in invites}
+        try:
+            invites = await guild.fetch_invites()
+            invite_cache[guild.id] = {inv.code: inv.uses for inv in invites}
+        except discord.Forbidden:
+            print(f"Missing permission to fetch invites in {guild.name}")
     print(f'Bot is online as {client.user}')
 
 @client.event
@@ -53,14 +56,17 @@ async def on_member_join(member):
 
         # Find who invited the member
         inviter = "Unknown"
-        new_invites = await member.guild.fetch_invites()
-        for inv in new_invites:
-            cached_uses = invite_cache.get(member.guild.id, {}).get(inv.code, 0)
-            if inv.uses > cached_uses:
-                if inv.inviter:
-                    inviter = str(inv.inviter)
-                break
-        invite_cache[member.guild.id] = {inv.code: inv.uses for inv in new_invites}
+        try:
+            new_invites = await member.guild.fetch_invites()
+            for inv in new_invites:
+                cached_uses = invite_cache.get(member.guild.id, {}).get(inv.code, 0)
+                if inv.uses > cached_uses:
+                    if inv.inviter:
+                        inviter = str(inv.inviter)
+                    break
+            invite_cache[member.guild.id] = {inv.code: inv.uses for inv in new_invites}
+        except discord.Forbidden:
+            print(f"Missing permission to fetch invites")
 
         # Mention in general channel
         general_channel = client.get_channel(GENERAL_CHANNEL_ID)
