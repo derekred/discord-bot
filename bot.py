@@ -30,7 +30,7 @@ invite_cache = {}
 async def on_ready():
     for guild in client.guilds:
         try:
-            invites = await guild.fetch_invites()
+            invites = await guild.invites()
             invite_cache[guild.id] = {inv.code: inv.uses for inv in invites}
         except discord.Forbidden:
             print(f"Missing permission to fetch invites in {guild.name}")
@@ -57,7 +57,7 @@ async def on_member_join(member):
         # Find who invited the member
         inviter = "Unknown"
         try:
-            new_invites = await member.guild.fetch_invites()
+            new_invites = await member.guild.invites()
             for inv in new_invites:
                 cached_uses = invite_cache.get(member.guild.id, {}).get(inv.code, 0)
                 if inv.uses > cached_uses:
