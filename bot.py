@@ -13,20 +13,29 @@ SHEET_NAME = "Discord Members"
 sheet = gc.open(SHEET_NAME).sheet1
 
 if not sheet.get_all_values():
-    sheet.append_row(["Discord Name", "Whop Username", "Joined At"])
+    sheet.append_row(["Discord Name", "Whop Username", "Joined At", "Invited By"])
 
 intents = discord.Intents.default()
 intents.members = True
+intents.invites = True
 
 client = discord.Client(intents=intents)
 
 GENERAL_CHANNEL_ID = 1478844102379569356  # Replace with your general channel ID
 
 pending_members = set()
+invite_cache = {}
 
 @client.event
 async def on_ready():
+    # Cache all invites when bot starts
+    for guild in client.guilds:
+        invite_cache[guild.id] = {inv.code: inv.uses for inv in await guild.fetches_invites()}
     print(f'Bot is online as {client.user}')
+
+@client.event
+async def on_invite_create(invite):
+    invite_cache[invite.guild.id][invite.code] = invite.uses
 
 @client.event
 async def on_member_join(member):
@@ -42,6 +51,18 @@ async def on_member_join(member):
 
         pending_members.add(member.id)
 
+        # Find who invited the member
+        inviter = "Unknown"
+        new_invites = {inv.code: inv.uses for inv in await member.guild.fetch_invites()}
+        for code, uses in new_invites.items():
+            if invite_cache.get(member.guild.id, {}).get(code, 0) < uses:
+                invite = discord.utils.get(await member.guild.fetch_invites(), code=code)
+                if invite and invite.inviter:
+                    inviter = str(invite.inviter)
+                break
+        invite_cache[member.guild.id] = {inv.code: inv.uses for inv in await member.guild.fetch_invites()}
+
+        # Mention in general channel
         general_channel = client.get_channel(GENERAL_CHANNEL_ID)
         if general_channel:
             await general_channel.send(
@@ -49,6 +70,7 @@ async def on_member_join(member):
                 f"Please check your DMs and reply with your **Whop username** to get access."
             )
 
+        # Send DM
         await member.send(
             f"Welcome to the server, {member.name}!\n"
             f"Please reply with your Whop username to get access. You have 5 minutes to respond."
@@ -63,11 +85,12 @@ async def on_member_join(member):
         sheet.append_row([
             str(member),
             whop_username,
-            str(member.joined_at)
+            str(member.joined_at),
+            inviter
         ])
 
         await member.send(f"Got it! Your Whop username {whop_username} has been saved.")
-        print(f"Saved: {member} -> {whop_username}")
+        print(f"Saved: {member} -> {whop_username} | Invited by: {inviter}")
 
         if general_channel:
             await general_channel.send(f"✅ {member.mention} has been verified!")
@@ -83,4 +106,3 @@ async def on_member_join(member):
         pending_members.discard(member.id)
 
 client.run(os.getenv("DISCORD_TOKEN"))
-        
