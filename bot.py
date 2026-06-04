@@ -21,7 +21,7 @@ intents.invites = True
 
 client = discord.Client(intents=intents)
 
-GENERAL_CHANNEL_ID = 1478844102379569356  # Replace with your general channel ID
+GENERAL_CHANNEL_ID = 1478747697182933023  # Replace with your general channel ID
 
 pending_members = set()
 invite_cache = {}
